@@ -106,7 +106,7 @@ app.get("/",( req, res )=>{
     </head>
     <body>
         <section class="card">
-            <h1>Welcome back 👋</h1>
+            <h1>Welcome back!  👋</h1>
             <p>Sign in to continue to your dashboard.</p>
             <form action="/login" method="post">
                 <input class="input" type="text" name="username" placeholder="Username" required>
