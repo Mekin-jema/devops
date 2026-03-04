@@ -1,0 +1,3 @@
+Commands 
+- docker run --rm -p 300:3000 -v "/home/mekin/Desktop/Projects/docker/node
+:/app" -v /app/node_modules -v todo:/app/todo 2627b7188c82

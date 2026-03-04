@@ -9,6 +9,9 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const TODO_DIR = path.join(__dirname, "todo")
 const TODO_FILE = path.join(TODO_DIR, "todo.txt")
+const SWAPI_BASE_URL = "https://swapi.dev/api"
+const SWAPI_RESOURCES = new Set(["people", "films", "starships", "vehicles", "species", "planets"])
+const DUMMY_API_BASE_URL = "https://jsonplaceholder.typicode.com"
 
 
 app.use(express.json()      )
@@ -79,6 +82,130 @@ const escapeHtml = (value) =>
         .replaceAll("'", "&#39;")
 
 app.use(requestLogger)
+
+const buildSwapiUrl = (resource, id, search, page) => {
+    const cleanResource = String(resource || "").trim().toLowerCase()
+
+    if (!SWAPI_RESOURCES.has(cleanResource)) {
+        return null
+    }
+
+    const idPart = id ? `/${encodeURIComponent(String(id).trim())}` : ""
+    const url = new URL(`${SWAPI_BASE_URL}/${cleanResource}${idPart}/`)
+
+    if (search) {
+        url.searchParams.set("search", String(search).trim())
+    }
+
+    if (page) {
+        url.searchParams.set("page", String(page).trim())
+    }
+
+    return url
+}
+
+const fetchSwapi = async (url) => {
+    const response = await fetch(url)
+
+    if (!response.ok) {
+        const error = new Error(`SWAPI request failed with status ${response.status}`)
+        error.status = response.status
+        throw error
+    }
+
+    return response.json()
+}
+
+app.get("/api/swapi/:resource", async (req, res, next) => {
+    try {
+        const { resource } = req.params
+        const { search, page } = req.query
+        const url = buildSwapiUrl(resource, null, search, page)
+
+        if (!url) {
+            return res.status(400).json({
+                error: "Invalid SWAPI resource.",
+                supportedResources: [...SWAPI_RESOURCES]
+            })
+        }
+
+        const data = await fetchSwapi(url)
+        res.json(data)
+    } catch (error) {
+        next(error)
+    }
+})
+
+app.get("/api/swapi/:resource/:id", async (req, res, next) => {
+    try {
+        const { resource, id } = req.params
+        const url = buildSwapiUrl(resource, id)
+
+        if (!url) {
+            return res.status(400).json({
+                error: "Invalid SWAPI resource.",
+                supportedResources: [...SWAPI_RESOURCES]
+            })
+        }
+
+        const data = await fetchSwapi(url)
+        res.json(data)
+    } catch (error) {
+        if (error.status === 404) {
+            return res.status(404).json({ error: "SWAPI record not found." })
+        }
+
+        next(error)
+    }
+})
+
+app.get("/api/dummy/posts", async (req, res, next) => {
+    try {
+        const { userId, limit } = req.query
+        const url = new URL(`${DUMMY_API_BASE_URL}/posts`)
+
+        if (userId) {
+            url.searchParams.set("userId", String(userId).trim())
+        }
+
+        const response = await fetch(url)
+
+        if (!response.ok) {
+            throw new Error(`Dummy API request failed with status ${response.status}`)
+        }
+
+        const data = await response.json()
+        const safeLimit = Number(limit)
+
+        if (Number.isInteger(safeLimit) && safeLimit > 0) {
+            return res.json(data.slice(0, safeLimit))
+        }
+
+        res.json(data)
+    } catch (error) {
+        next(error)
+    }
+})
+
+app.get("/api/dummy/posts/:id", async (req, res, next) => {
+    try {
+        const { id } = req.params
+        const response = await fetch(`${DUMMY_API_BASE_URL}/posts/${encodeURIComponent(id)}`)
+
+        if (response.status === 404) {
+            return res.status(404).json({ error: "Dummy post not found." })
+        }
+
+        if (!response.ok) {
+            throw new Error(`Dummy API request failed with status ${response.status}`)
+        }
+
+        const data = await response.json()
+        res.json(data)
+    } catch (error) {
+        next(error)
+    }
+})
 
 
 app.get("/",( req, res )=>{
