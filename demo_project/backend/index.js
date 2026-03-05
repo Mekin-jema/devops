@@ -6,7 +6,7 @@ const mongoose = require("mongoose");
 
 const app = express();
 const port = process.env.PORT || 5000;
-const mongoUrl = process.env.MONGO_URL || "mongodb://localhost:27017/todo_db";
+const mongoUrl = process.env.MONGO_URL || "mongodb://host.docker.internal:27017/todo_db";
 
 const todoSchema = new mongoose.Schema(
   {
